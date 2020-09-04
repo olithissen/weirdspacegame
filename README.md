@@ -4,6 +4,8 @@
 
 I don't know where this will be going, but it will have something to do with gravity.
 
+Current demo: https://some-weird-space-game.netlify.app/
+
 # Run
 
 ```bash
