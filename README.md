@@ -9,7 +9,7 @@ Current demo: https://some-weird-space-game.netlify.app/
 # Run
 
 ```bash
-yarn dev
+yarn install && yarn dev
 ```
 
 # Technologies used
