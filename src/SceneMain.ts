@@ -1,7 +1,13 @@
 import { Game } from "phaser";
 import { game } from "./main";
 
+const G = 6.67408e-11;
+
 class Planet extends Phaser.GameObjects.GameObject {
+    mass: number;
+    x: number;
+    y: number;
+
     constructor(scene: Phaser.Scene, x: number, y: number, mass: number, diameter: number, hasAtmosphere: boolean = false) {
         super(scene, "test");
 
@@ -51,18 +57,24 @@ class BetterShip extends Phaser.GameObjects.Polygon {
         this.scene.physics.world.enableBody(this, 0);
     }
 
+    getPosition(): Phaser.Math.Vector2 {
+        return new Phaser.Math.Vector2(this.x, this.y);
+    }
+
     setGravitySources(gravitySources: Phaser.GameObjects.Group) {
         this.gravitySources = gravitySources;
     }
 
     update() {
         let f = this.gravityTotal(this.gravitySources, this);
-        this.ship.vec.add(f);
-        this.ship.pos.add(this.ship.vec);
-
+        this.movementVector.add(f);
+        let position = new Phaser.Math.Vector2(this.x, this. y);
+        position.add(this.movementVector);
+        this.x = position.x;
+        this.y = position.y
     }
 
-    gravityTotal(gravitySources: Phaser.GameObjects.Group, self: this) {
+    gravityTotal(gravitySources: Phaser.GameObjects.Group, ship: BetterShip) {
         let sum = new Phaser.Math.Vector2();
         gravitySources.getChildren()
             .map(obj => obj as Planet)
@@ -74,15 +86,15 @@ class BetterShip extends Phaser.GameObjects.Polygon {
         return sum;
     }
 
-    gravity(planet: Planet, ship: { pos: Phaser.Math.Vector2; }) {
-        let soVector = new Phaser.Math.Vector2(so.x, so.y);
+    gravity(planet: Planet, ship: BetterShip) {
+        let soVector = new Phaser.Math.Vector2(planet.x, planet.y);
 
-        let distance = Phaser.Math.Distance.BetweenPoints(so, ship.pos);
+        let distance = Phaser.Math.Distance.BetweenPoints(planet, ship.getPosition());
         let r2 = Math.pow(distance, 2.0);
-        let f = (this.G * so.mass) / r2;
+        let f = (G * planet.mass) / r2;
 
 
-        let v = soVector.subtract(ship.pos).normalize().scale(f);
+        let v = soVector.subtract(ship.getPosition()).normalize().scale(f);
         return v;
     }}
 
@@ -119,7 +131,6 @@ export class SceneMain extends Phaser.Scene {
     lineVector: Phaser.GameObjects.Line;
     lineVectorGravity: Phaser.GameObjects.Line;
 
-    readonly G = 6.67408e-11;
     poly: BetterShip;
     fuelStats: FuelStats;
     gravitySources: Phaser.GameObjects.Group;
@@ -255,7 +266,7 @@ export class SceneMain extends Phaser.Scene {
 
         let distance = Phaser.Math.Distance.BetweenPoints(so, ship.pos);
         let r2 = Math.pow(distance, 2.0);
-        let f = (this.G * so.mass) / r2;
+        let f = (G * so.mass) / r2;
 
 
         let v = soVector.subtract(ship.pos).normalize().scale(f);

@@ -1,7 +1,6 @@
 import * as Phaser from 'phaser';
 import { SceneMainMenu } from "./SceneMainMenu";
 import { SceneMain } from "./SceneMain";
-import { DemoScene } from "./DemoScene";
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
     active: false,
@@ -26,7 +25,7 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
         },
     },
 
-    scene: [SceneMainMenu, SceneMain, DemoScene],
+    scene: [SceneMainMenu, SceneMain],
 
     parent: 'game',
     backgroundColor: '#000000',
