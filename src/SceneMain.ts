@@ -137,22 +137,23 @@ class BetterShip extends Phaser.GameObjects.Polygon {
     thrust() {
         let localThrustVector = new Phaser.Math.Vector2(0, 0);
 
-        if (this.thrusterUp) {
-            localThrustVector.add(new Phaser.Math.Vector2(0, -this.thrustValue));
-        }
-        if (this.thrusterDown) {
-            localThrustVector.add(new Phaser.Math.Vector2(0, this.thrustValue));
-        }
-        if (this.thrusterRight) {
-            localThrustVector.add(new Phaser.Math.Vector2(this.thrustValue, 0));
-        }
-        if (this.thrusterLeft) {
-            localThrustVector.add(new Phaser.Math.Vector2(-this.thrustValue, 0));
-        }
+        if (this.fuel > 0) {
+            if (this.thrusterUp) {
+                localThrustVector.add(new Phaser.Math.Vector2(0, -this.thrustValue));
+            }
+            if (this.thrusterDown) {
+                localThrustVector.add(new Phaser.Math.Vector2(0, this.thrustValue));
+            }
+            if (this.thrusterRight) {
+                localThrustVector.add(new Phaser.Math.Vector2(this.thrustValue, 0));
+            }
+            if (this.thrusterLeft) {
+                localThrustVector.add(new Phaser.Math.Vector2(-this.thrustValue, 0));
+            }
 
-        this.fuel -= localThrustVector.length() * this.fuelConsumption;
-        this.fuel = Phaser.Math.Clamp(this.fuel, 0, 10);
-
+            this.fuel -= localThrustVector.length() * this.fuelConsumption;
+            this.fuel = Phaser.Math.Clamp(this.fuel, 0, 10);
+        }
         return localThrustVector;
     }
 
@@ -229,8 +230,49 @@ class BetterShip extends Phaser.GameObjects.Polygon {
 }
 
 class GameCreator {
-    constructor(seed: number) {
+    scene: SceneMain;
+    rnd: Phaser.Math.RandomDataGenerator;
+    shipPosition: Phaser.Math.Vector2;
+    planets: Planet[] = [];
+    generated: boolean = false;
 
+    constructor(scene: SceneMain, seed: string) {
+        this.scene = scene;
+        this.rnd = new Phaser.Math.RandomDataGenerator([seed]);
+    }
+
+    generate() {
+        let numberOfPlanets = this.rnd.between(2, 7);
+
+        for (let i = 0; i < numberOfPlanets; i++) {
+            let position = new Phaser.Math.Vector2();
+            position.setToPolar(this.rnd.rotation(), this.rnd.between(0, 450));
+            let diameter = this.rnd.realInRange(10, 100);
+            let mass = (49E10 * diameter) / 9 - 4E12 / 9;
+            let planet = new Planet(this.scene, position.x, position.y, mass, diameter);
+            this.planets.push(planet);
+        }
+
+        this.generated = true;
+    }
+
+    getPlanets(): Planet[] {
+        if (!this.generated) {
+            this.generate();
+        }
+
+        return this.planets;
+    }
+
+    getShipPosition(): Phaser.Math.Vector2 {
+        if (!this.generated) {
+            this.generate();
+        }
+        
+        let position = new Phaser.Math.Vector2();
+        position.setToPolar(this.rnd.rotation(), this.rnd.between(0, 450));
+
+        return position;
     }
 }
 
@@ -241,18 +283,22 @@ export class SceneMain extends Phaser.Scene {
     myShip: BetterShip;
     gravitySources: Phaser.GameObjects.Group;
     timeText: Phaser.GameObjects.Text;
-    gameSpeed: number;
     startTime: number;
     fuelText: Phaser.GameObjects.Text;
     seedText: Phaser.GameObjects.Text;
     totalTime: number;
+    seed: string;
 
     constructor() {
         super({ key: "SceneMain" });
     }
 
-    init(seed: number) {
-        console.log(seed);
+    init() {
+        let seed = window.location.search.substr(1);
+        if (seed.length == 0) {
+            seed = "1";
+        }
+        this.seed = seed;
     }
 
     preload() {
@@ -264,7 +310,7 @@ export class SceneMain extends Phaser.Scene {
     create() {
         this.startTime = this.sys.game.loop.time;
 
-        this.seedText = this.add.text(5, 5, "Seed");
+        this.seedText = this.add.text(5, 5, "Star System: " + this.seed);
         this.seedText.setScrollFactor(0, 0);
 
         this.timeText = this.add.text(5, 25, "Time:");
@@ -281,18 +327,17 @@ export class SceneMain extends Phaser.Scene {
         this.camera.centerOn(0, 0);
         this.camera.setZoom(1);
 
-        let a = new Planet(this, 0, 0, 9E11, 40);
-        let b = new Planet(this, 200, 200, 7E11, 30);
-        let c = new Planet(this, -50, -100, 5E11, 20);
-
         this.gravitySources = this.add.group();
-        this.gravitySources.addMultiple([a, b, c]);
 
-        this.myShip = new BetterShip(this, -100, 10);
+        let generator = new GameCreator(this, this.seed);
+        generator.generate()
+
+        this.gravitySources.addMultiple(generator.getPlanets());
+
+        let shipPosition = generator.getShipPosition()
+        this.myShip = new BetterShip(this, shipPosition.x, shipPosition.y);
         this.myShip.gravitySources = this.gravitySources;
         this.camera.startFollow(this.myShip);
-
-        this.gameSpeed = Phaser.Math.GetSpeed(500, 5);
     }
 
     update() {
@@ -326,7 +371,7 @@ export class SceneMain extends Phaser.Scene {
                     duration: 2000,
                     moveAbove: true,
                     sleep: false,
-                    data: { time: this.totalTime },
+                    data: { time: this.totalTime, seed: this.seed },
                 });
             }
         }
