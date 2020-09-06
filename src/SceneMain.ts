@@ -1,15 +1,15 @@
-import { Game } from "phaser";
-import { game } from "./main";
-
 const G = 6.67408e-11;
 
-class Planet extends Phaser.GameObjects.GameObject {
+class Planet extends Phaser.GameObjects.Ellipse {
     mass: number;
     x: number;
     y: number;
+    radius: number = 15;
 
     constructor(scene: Phaser.Scene, x: number, y: number, mass: number, diameter: number, hasAtmosphere: boolean = false) {
-        super(scene, "test");
+        super(scene);
+
+        this.mass = mass;
 
         if (hasAtmosphere) {
             let atmosphere = scene.add.ellipse(x, y, 50, 50, 0x00ccff, 0.3);
@@ -18,25 +18,41 @@ class Planet extends Phaser.GameObjects.GameObject {
             atmosphere.strokeColor = 0x00ccff;
         }
 
-        let planet = scene.add.ellipse(x, y, 30, 30, 0x000000);
+        let planet = scene.add.ellipse(x, y, this.radius * 2, this.radius * 2, 0x000000);
         planet.isStroked = true;
         planet.strokeColor = 0xffffff;
 
-        this.scene.physics.world.enableBody(this, 0);
+        this.scene.physics.world.enableBody(this, Phaser.Physics.Arcade.STATIC_BODY);
+        this.body.position.x = x;
+        this.body.position.y = y;
 
         scene.add.existing(this);
+        console.log(this.getBounds());
     }
 }
 
-const points: String = '0 5 5 0 0 -5 -5 0';
+// const points: String = '0 5 5 0 0 -5 -5 0';
+const points: String = '5 5 5 -5 -5 -5 -5 5';
+// const points: String = '10 10 10 0 0 0 0 10';
 class BetterShip extends Phaser.GameObjects.Polygon {
-    thrustValue: number;
+    thrustValue: number = 0.02;
     fuel: number;
     fuelConsumption: number;
     thrustVector: Phaser.Math.Vector2;
     gravityVector: Phaser.Math.Vector2;
     movementVector: Phaser.Math.Vector2;
     gravitySources: Phaser.GameObjects.Group;
+    radius: number = 5;
+    alive: boolean = true;
+
+    lineGravityVector: Phaser.GameObjects.Line;
+    lineMovementVector: Phaser.GameObjects.Line;
+    lineThrustVector: Phaser.GameObjects.Line;
+
+    thrusterUp: boolean;
+    thrusterDown: boolean;
+    thrusterLeft: boolean;
+    thrusterRight: boolean;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, points, 0x222222);
@@ -44,7 +60,6 @@ class BetterShip extends Phaser.GameObjects.Polygon {
         this.isStroked = true;
         this.strokeColor = 0x00ff00;
 
-        this.thrustValue = 2.01;
         this.fuel = 10.0;
         this.fuelConsumption = 0.1;
 
@@ -52,89 +67,133 @@ class BetterShip extends Phaser.GameObjects.Polygon {
         this.gravityVector = new Phaser.Math.Vector2(0, 0);
         this.movementVector = new Phaser.Math.Vector2(0, 0);
 
+        this.lineMovementVector = scene.add.line(0, 0, 0, 0, 0, 0, 0x00ff00).setOrigin(0, 0);
+        this.lineGravityVector = scene.add.line(0, 0, 0, 0, 0, 0, 0xff00ff).setOrigin(0, 0);
+        this.lineThrustVector = scene.add.line(0, 0, 0, 0, 0, 0, 0xffff00).setOrigin(0, 0);
+
         scene.add.existing(this);
 
-        this.scene.physics.world.enableBody(this, 0);
+        this.scene.physics.world.enableBody(this, Phaser.Physics.Arcade.DYNAMIC_BODY);
+        this.body.position.x = x;
+        this.body.position.y = y;
     }
 
-    getPosition(): Phaser.Math.Vector2 {
-        return new Phaser.Math.Vector2(this.x, this.y);
-    }
-
-    setGravitySources(gravitySources: Phaser.GameObjects.Group) {
-        this.gravitySources = gravitySources;
+    thrusters(up: boolean, down: boolean, left: boolean, right: boolean) {
+        this.thrusterUp = up;
+        this.thrusterDown = down;
+        this.thrusterLeft = left;
+        this.thrusterRight = right;
     }
 
     update() {
-        let f = this.gravityTotal(this.gravitySources, this);
-        this.movementVector.add(f);
-        let position = new Phaser.Math.Vector2(this.x, this. y);
-        position.add(this.movementVector);
-        this.x = position.x;
-        this.y = position.y
+        if (this.alive) {
+            this.gravityVector = this.gravityTotal(this.gravitySources, this);
+            this.thrustVector = this.thrust();
+            this.movementVector.add(this.gravityVector).add(this.thrustVector);
+            this.body.position.x += this.movementVector.x;
+            this.body.position.y += this.movementVector.y;
+            this.drawVectorLines();
+        }
+    }
+
+    thrust() {
+        let localThrustVector = new Phaser.Math.Vector2(0, 0);
+
+        if (this.thrusterUp) {
+            localThrustVector.add(new Phaser.Math.Vector2(0, -this.thrustValue));
+        }
+        if (this.thrusterDown) {
+            localThrustVector.add(new Phaser.Math.Vector2(0, this.thrustValue));
+        }
+        if (this.thrusterRight) {
+            localThrustVector.add(new Phaser.Math.Vector2(this.thrustValue, 0));
+        }
+        if (this.thrusterLeft) {
+            localThrustVector.add(new Phaser.Math.Vector2(-this.thrustValue, 0));
+        }
+
+        return localThrustVector;
+
     }
 
     gravityTotal(gravitySources: Phaser.GameObjects.Group, ship: BetterShip) {
-        let sum = new Phaser.Math.Vector2();
+        let totalGravityVector = new Phaser.Math.Vector2();
         gravitySources.getChildren()
             .map(obj => obj as Planet)
             .map((planet: Planet) => this.gravity(planet, ship))
-            .forEach((gravity: Phaser.Math.Vector2) => {
-                sum.add(gravity);
+            .forEach((gravityVector: Phaser.Math.Vector2) => {
+                totalGravityVector.add(gravityVector);
             });
 
-        return sum;
+        return totalGravityVector;
     }
 
     gravity(planet: Planet, ship: BetterShip) {
-        let soVector = new Phaser.Math.Vector2(planet.x, planet.y);
+        let distance = Phaser.Math.Distance.BetweenPoints(planet.body.position, ship.body.position);
+        let gravitationalForce = (G * planet.mass) / Math.pow(distance, 2.0);
 
-        let distance = Phaser.Math.Distance.BetweenPoints(planet, ship.getPosition());
-        let r2 = Math.pow(distance, 2.0);
-        let f = (G * planet.mass) / r2;
-
-
-        let v = soVector.subtract(ship.getPosition()).normalize().scale(f);
-        return v;
-    }}
-
-class FuelStats extends Phaser.GameObjects.Text {
-    constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, "10", { fontFamily: "Georgia" });
-        scene.add.existing(this);
+        let gravityVector = (planet.body.position as Phaser.Math.Vector2).clone().subtract(ship.body.position as Phaser.Math.Vector2).normalize().scale(gravitationalForce);
+        return gravityVector;
     }
-}
 
-class Ship {
-    pos: Phaser.Math.Vector2;
-    vec: Phaser.Math.Vector2;
-    thrust: Phaser.Math.Vector2;
-    fuel: number = 10.0;
+    drawVectorLines() {
+        let movementTarget = (this.body.position as Phaser.Math.Vector2).clone().add(this.movementVector.clone().scale(30));
+        this.lineMovementVector.setTo(this.body.position.x, this.body.position.y, movementTarget.x, movementTarget.y);
 
-    constructor(pos: Phaser.Math.Vector2) {
-        this.pos = pos;
-        this.vec = new Phaser.Math.Vector2(0, 0);
+        let gravityTarget = (this.body.position as Phaser.Math.Vector2).clone().add(this.gravityVector.clone().scale(1000));
+        this.lineGravityVector.setTo(this.body.position.x, this.body.position.y, gravityTarget.x, gravityTarget.y);
+
+        let thrustTarget = (this.body.position as Phaser.Math.Vector2).clone().add(this.thrustVector.clone().scale(1000));
+        this.lineThrustVector.setTo(this.body.position.x, this.body.position.y, thrustTarget.x, thrustTarget.y);
+    }
+
+    destroy() {
+        this.visible = false;
+        this.lineGravityVector.visible = false;
+        this.lineMovementVector.visible = false;
+        this.lineThrustVector.visible = false
+
+        let debrisParticles = this.scene.add.particles('red');
+        debrisParticles.setPosition(this.body.position.x, this.body.position.y);
+
+        let explosionParticles = this.scene.add.particles('blue');
+        explosionParticles.setPosition(this.body.position.x, this.body.position.y);
+
+        let angle: number = Phaser.Math.RadToDeg(this.movementVector.angle());
+        let speed: number = this.movementVector.length() * 30;
+        
+        var debrisEmitter = debrisParticles.createEmitter({
+            lifespan: { min: 200, max: 4000 },
+            maxParticles: 30,
+            speed: { min: speed * 0.1, max: speed },
+            angle: { min: angle - 30, max: angle + 30 },
+            scale: { start: 0.2, end: 0 },
+            quantity: 30,
+            blendMode: 'ADD'
+        });
+
+        var explosionEmitter = explosionParticles.createEmitter({
+            lifespan: 2500,
+            maxParticles: 1,
+            speed: 0,
+            angle: 0,
+            scale: { start: 0.8, end: 0 },
+            quantity: 1,
+            blendMode: 'ADD'
+        });
+
+        debrisEmitter.start();
+        explosionEmitter.start();
+        this.alive = false;
     }
 }
 
 export class SceneMain extends Phaser.Scene {
     cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-    graphics: Phaser.GameObjects.Graphics;
     camera: Phaser.Cameras.Scene2D.Camera;
-    planets: {
-        x: number; y: number;
-        mass: number;
-        // diameter: number;
-    }[];
-    // ship: { pos: Phaser.Math.Vector2; vec: Phaser.Math.Vector2; thrust: Phaser.Math.Vector2; };
-    ship: Ship;
-    lineVector: Phaser.GameObjects.Line;
-    lineVectorGravity: Phaser.GameObjects.Line;
 
-    poly: BetterShip;
-    fuelStats: FuelStats;
+    myShip: BetterShip;
     gravitySources: Phaser.GameObjects.Group;
-    gs: Planet;
 
     constructor() {
         super({ key: "SceneMain" });
@@ -145,131 +204,41 @@ export class SceneMain extends Phaser.Scene {
     }
 
     preload() {
+        this.load.setBaseURL('https://labs.phaser.io');
+        this.load.image('red', 'assets/particles/red.png');
+        this.load.image('blue', 'assets/particles/blue.png');
     }
 
     create() {
         this.cursors = this.input.keyboard.createCursorKeys();
-        this.graphics = this.add.graphics();
         this.camera = this.cameras.main;
         this.camera.centerOn(0, 0);
         this.camera.setZoom(1);
 
-        this.fuelStats = new FuelStats(this, 10, 10);
-        this.fuelStats
-
-        const planet = {
-            x: 0,
-            y: 0,
-            // mass: 5.97219E24,
-            // diameter: 12742E3
-            mass: 9E11
-        }
-
-        const moon = {
-            x: 200,
-            y: 200,
-            // mass: 7.342E22,
-            // diameter: 3474.2E3
-            mass: 7E11
-        }
-
-        let earth     = new Planet(this, 300, 300, 5.97219E11, 12742E3, true);
-        let earthMoon = new Planet(this, -100, 0, 7.342E9, 3474.2E3);
+        let a = new Planet(this, 0, 0, 9E11, 12742E3);
+        let b = new Planet(this, 200, 200, 7E11, 3474.2E3);
+        let c = new Planet(this, -50, -100, 5E11, 3474.2E3);
 
         this.gravitySources = this.add.group();
-        this.gravitySources.addMultiple([earth, earthMoon]);
+        this.gravitySources.addMultiple([a, b, c]);
 
-        this.planets = [planet, moon, { x: -50, y: -100, mass: 5E11 }];
-
-        this.poly = new BetterShip(this, 50, 50);
-        this.poly.setGravitySources(this.gravitySources);
-
-        console.log(this);
-
-        console.log(this.poly);
-
-        this.ship = new Ship(new Phaser.Math.Vector2(-200, -200));
-
-        this.lineVector = this.add.line(0, 0, 0, 0, 0, 0, 0x00ff00).setOrigin(0, 0);
-        this.lineVectorGravity = this.add.line(0, 0, 0, 0, 0, 0, 0xff00ff).setOrigin(0, 0);
-
-        this.cameras.main.centerOn(0, 0);
-
+        this.myShip = new BetterShip(this, -100, 10);
+        this.myShip.gravitySources = this.gravitySources;
     }
 
     update() {
-        if (this.cursors.left.isDown) {
-            this.ship.vec.add(new Phaser.Math.Vector2(-0.01, 0));
-            this.ship.fuel -= 0.01;
-        }
-        else if (this.cursors.right.isDown) {
-            this.ship.vec.add(new Phaser.Math.Vector2(0.01, 0));
-            this.ship.fuel -= 0.01;
-        }
-
-        if (this.cursors.up.isDown) {
-            this.ship.vec.add(new Phaser.Math.Vector2(0, -0.01));
-            this.ship.fuel -= 0.01;
-        }
-        else if (this.cursors.down.isDown) {
-            this.ship.vec.add(new Phaser.Math.Vector2(0, 0.01));
-            this.ship.fuel -= 0.01;
-        }
-
-        this.graphics.clear();
-        this.graphics.fillStyle(0xffffff, 1);
-
-        this.planets.forEach(body => {
-            this.graphics.fillCircle(body.x, body.y, body.mass / 5e10);
-        });
-
-
-        this.graphics.fillStyle(0xff0000, 1);
-        this.graphics.fillCircle(this.ship.pos.x, this.ship.pos.y, 4);
-
-        // f = gravity(planet, ship);
-        let f = this.gravityTotal(this.planets, this.ship);
-        this.ship.vec.add(f);
-        this.ship.pos.add(this.ship.vec);
-        this.drawLineVectors(this.ship, f);
-        this.fuelStats.setText(this.ship.fuel.toString());
-        this.poly.update();
+        this.myShip.thrusters(this.cursors.up.isDown, this.cursors.down.isDown, this.cursors.left.isDown, this.cursors.right.isDown)
+        this.myShip.update();
+        this.checkCollision(this.gravitySources.getChildren() as Planet[], this.myShip);
     }
 
-    drawLineVectors(ship: { pos: any; vec: any; thrust?: Phaser.Math.Vector2; }, gravity: Phaser.Math.Vector2) {
-        let origin = ship.pos.clone();
-
-        let vec = ship.vec.clone();
-        let target = ship.pos.clone();
-        target.add(vec.scale(30));
-        this.lineVector.setTo(origin.x, origin.y, target.x, target.y);
-
-        let targetGravity = ship.pos.clone();
-        targetGravity.add(gravity.clone().scale(3000));
-        this.lineVectorGravity.setTo(origin.x, origin.y, targetGravity.x, targetGravity.y);
-
-    }
-
-    gravityTotal(bodies: any[], ship: { pos: Phaser.Math.Vector2; vec: Phaser.Math.Vector2; thrust: Phaser.Math.Vector2; }) {
-        let sum = new Phaser.Math.Vector2();
-        bodies
-            .map((body: any) => this.gravity(body, ship))
-            .forEach((gravity: Phaser.Math.Vector2) => {
-                sum.add(gravity);
+    checkCollision(planets: Planet[], ship: BetterShip) {
+        if (ship.alive) {
+            planets.forEach((planet: Planet) => {
+                if (Math.pow(ship.body.position.x - planet.body.position.x, 2) + Math.pow(ship.body.position.y - planet.body.position.y, 2) <= Math.pow(ship.radius + planet.radius, 2)) {
+                    ship.destroy();
+                }
             });
-
-        return sum;
-    }
-
-    gravity(so: { x: any; y: any; mass?: any; }, ship: { pos: Phaser.Math.Vector2; }) {
-        let soVector = new Phaser.Math.Vector2(so.x, so.y);
-
-        let distance = Phaser.Math.Distance.BetweenPoints(so, ship.pos);
-        let r2 = Math.pow(distance, 2.0);
-        let f = (G * so.mass) / r2;
-
-
-        let v = soVector.subtract(ship.pos).normalize().scale(f);
-        return v;
+        }
     }
 }
