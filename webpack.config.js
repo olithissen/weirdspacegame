@@ -34,7 +34,7 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
   },
 
-  mode: 'production',
+  mode: 'development',
 
   devServer: {
     contentBase: path.resolve(__dirname, 'dist'),
@@ -59,15 +59,15 @@ module.exports = {
     }),
   ],
 
-  optimization: {
-    splitChunks: {
-      cacheGroups: {
-        commons: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all',
-        },
-      },
-    },
-  },
+  // optimization: {
+  //   splitChunks: {
+  //     cacheGroups: {
+  //       commons: {
+  //         test: /[\\/]node_modules[\\/]/,
+  //         name: 'vendors',
+  //         chunks: 'all',
+  //       },
+  //     },
+  //   },
+  // },
 };
