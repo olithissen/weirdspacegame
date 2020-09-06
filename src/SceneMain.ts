@@ -1,15 +1,59 @@
 const G = 6.67408e-11;
+const zeroVector = new Phaser.Math.Vector2(0, 0);
+
+class Asteroid extends Phaser.GameObjects.Polygon {
+    constructor(scene: Phaser.Scene, x: number, y: number) {
+        super(scene, x, y, "0 2 0 1 6 8 8 2 1 0");
+        this.isFilled = false;
+        this.isStroked = true;
+        this.strokeColor = 0x444444;
+
+        this.scene.add.tween({
+            targets: this,
+            angle: 360 * new Phaser.Math.RandomDataGenerator().sign(),
+            duration: Phaser.Math.Between(2000, 10000),
+            repeat: -1,
+        });
+
+        scene.add.existing(this);
+    }
+}
+
+class AsteroidBelt extends Phaser.GameObjects.Container {
+    constructor(scene: Phaser.Scene, count: number, color: number, radius: { min: number, max: number }) {
+        super(scene, 0, 0, []);
+
+        let rnd = new Phaser.Math.RandomDataGenerator();
+
+        for (let i = 0; i < count; i++) {
+            let vector = new Phaser.Math.Vector2();
+            vector.setToPolar(rnd.rotation(), rnd.between(radius.min, radius.max));
+            let asteroid = new Asteroid(scene, vector.x, vector.y);
+            asteroid.strokeColor = color;
+        }
+
+        this.scene.add.tween({
+            targets: this,
+            angle: 360,
+            duration: 3000,
+            repeat: -1,
+        });
+
+        scene.add.existing(this);
+    }
+}
 
 class Planet extends Phaser.GameObjects.Ellipse {
     mass: number;
     x: number;
     y: number;
-    radius: number = 15;
+    diameter: number;
 
     constructor(scene: Phaser.Scene, x: number, y: number, mass: number, diameter: number, hasAtmosphere: boolean = false) {
         super(scene);
 
         this.mass = mass;
+        this.diameter = diameter;
 
         if (hasAtmosphere) {
             let atmosphere = scene.add.ellipse(x, y, 50, 50, 0x00ccff, 0.3);
@@ -18,7 +62,7 @@ class Planet extends Phaser.GameObjects.Ellipse {
             atmosphere.strokeColor = 0x00ccff;
         }
 
-        let planet = scene.add.ellipse(x, y, this.radius * 2, this.radius * 2, 0x000000);
+        let planet = scene.add.ellipse(x, y, diameter, diameter, 0x000000);
         planet.isStroked = true;
         planet.strokeColor = 0xffffff;
 
@@ -27,17 +71,14 @@ class Planet extends Phaser.GameObjects.Ellipse {
         this.body.position.y = y;
 
         scene.add.existing(this);
-        console.log(this.getBounds());
     }
 }
 
-// const points: String = '0 5 5 0 0 -5 -5 0';
 const points: String = '5 5 5 -5 -5 -5 -5 5';
-// const points: String = '10 10 10 0 0 0 0 10';
 class BetterShip extends Phaser.GameObjects.Polygon {
     thrustValue: number = 0.02;
-    fuel: number;
-    fuelConsumption: number;
+    fuel: number = 10;
+    fuelConsumption: number = 2;
     thrustVector: Phaser.Math.Vector2;
     gravityVector: Phaser.Math.Vector2;
     movementVector: Phaser.Math.Vector2;
@@ -60,9 +101,6 @@ class BetterShip extends Phaser.GameObjects.Polygon {
         this.isStroked = true;
         this.strokeColor = 0x00ff00;
 
-        this.fuel = 10.0;
-        this.fuelConsumption = 0.1;
-
         this.thrustVector = new Phaser.Math.Vector2(0, 0);
         this.gravityVector = new Phaser.Math.Vector2(0, 0);
         this.movementVector = new Phaser.Math.Vector2(0, 0);
@@ -78,13 +116,6 @@ class BetterShip extends Phaser.GameObjects.Polygon {
         this.body.position.y = y;
     }
 
-    thrusters(up: boolean, down: boolean, left: boolean, right: boolean) {
-        this.thrusterUp = up;
-        this.thrusterDown = down;
-        this.thrusterLeft = left;
-        this.thrusterRight = right;
-    }
-
     update() {
         if (this.alive) {
             this.gravityVector = this.gravityTotal(this.gravitySources, this);
@@ -92,8 +123,15 @@ class BetterShip extends Phaser.GameObjects.Polygon {
             this.movementVector.add(this.gravityVector).add(this.thrustVector);
             this.body.position.x += this.movementVector.x;
             this.body.position.y += this.movementVector.y;
-            this.drawVectorLines();
+            // this.drawVectorLines();
         }
+    }
+
+    thrusters(up: boolean, down: boolean, left: boolean, right: boolean) {
+        this.thrusterUp = up;
+        this.thrusterDown = down;
+        this.thrusterLeft = left;
+        this.thrusterRight = right;
     }
 
     thrust() {
@@ -112,8 +150,10 @@ class BetterShip extends Phaser.GameObjects.Polygon {
             localThrustVector.add(new Phaser.Math.Vector2(-this.thrustValue, 0));
         }
 
-        return localThrustVector;
+        this.fuel -= localThrustVector.length() * this.fuelConsumption;
+        this.fuel = Phaser.Math.Clamp(this.fuel, 0, 10);
 
+        return localThrustVector;
     }
 
     gravityTotal(gravitySources: Phaser.GameObjects.Group, ship: BetterShip) {
@@ -161,9 +201,9 @@ class BetterShip extends Phaser.GameObjects.Polygon {
 
         let angle: number = Phaser.Math.RadToDeg(this.movementVector.angle());
         let speed: number = this.movementVector.length() * 30;
-        
+
         var debrisEmitter = debrisParticles.createEmitter({
-            lifespan: { min: 200, max: 4000 },
+            lifespan: { min: 200, max: 2000 },
             maxParticles: 30,
             speed: { min: speed * 0.1, max: speed },
             angle: { min: angle - 30, max: angle + 30 },
@@ -173,7 +213,7 @@ class BetterShip extends Phaser.GameObjects.Polygon {
         });
 
         var explosionEmitter = explosionParticles.createEmitter({
-            lifespan: 2500,
+            lifespan: 2000,
             maxParticles: 1,
             speed: 0,
             angle: 0,
@@ -188,12 +228,24 @@ class BetterShip extends Phaser.GameObjects.Polygon {
     }
 }
 
+class GameCreator {
+    constructor(seed: number) {
+
+    }
+}
+
 export class SceneMain extends Phaser.Scene {
     cursors: Phaser.Types.Input.Keyboard.CursorKeys;
     camera: Phaser.Cameras.Scene2D.Camera;
 
     myShip: BetterShip;
     gravitySources: Phaser.GameObjects.Group;
+    timeText: Phaser.GameObjects.Text;
+    gameSpeed: number;
+    startTime: number;
+    fuelText: Phaser.GameObjects.Text;
+    seedText: Phaser.GameObjects.Text;
+    totalTime: number;
 
     constructor() {
         super({ key: "SceneMain" });
@@ -210,35 +262,73 @@ export class SceneMain extends Phaser.Scene {
     }
 
     create() {
+        this.startTime = this.sys.game.loop.time;
+
+        this.seedText = this.add.text(5, 5, "Seed");
+        this.seedText.setScrollFactor(0, 0);
+
+        this.timeText = this.add.text(5, 25, "Time:");
+        this.timeText.setScrollFactor(0, 0);
+
+        this.fuelText = this.add.text(5, 45, "Fuel left:");
+        this.fuelText.setScrollFactor(0, 0);
+
+        new AsteroidBelt(this, 350, 0x777777, { min: 500, max: 600 });
+        new AsteroidBelt(this, 600, 0x444444, { min: 530, max: 1000 });
+
         this.cursors = this.input.keyboard.createCursorKeys();
         this.camera = this.cameras.main;
         this.camera.centerOn(0, 0);
         this.camera.setZoom(1);
 
-        let a = new Planet(this, 0, 0, 9E11, 12742E3);
-        let b = new Planet(this, 200, 200, 7E11, 3474.2E3);
-        let c = new Planet(this, -50, -100, 5E11, 3474.2E3);
+        let a = new Planet(this, 0, 0, 9E11, 40);
+        let b = new Planet(this, 200, 200, 7E11, 30);
+        let c = new Planet(this, -50, -100, 5E11, 20);
 
         this.gravitySources = this.add.group();
         this.gravitySources.addMultiple([a, b, c]);
 
         this.myShip = new BetterShip(this, -100, 10);
         this.myShip.gravitySources = this.gravitySources;
+        this.camera.startFollow(this.myShip);
+
+        this.gameSpeed = Phaser.Math.GetSpeed(500, 5);
     }
 
     update() {
-        this.myShip.thrusters(this.cursors.up.isDown, this.cursors.down.isDown, this.cursors.left.isDown, this.cursors.right.isDown)
-        this.myShip.update();
-        this.checkCollision(this.gravitySources.getChildren() as Planet[], this.myShip);
+        if (this.myShip.alive) {
+            this.myShip.thrusters(this.cursors.up.isDown, this.cursors.down.isDown, this.cursors.left.isDown, this.cursors.right.isDown)
+            this.myShip.update();
+            this.checkCollision(this.gravitySources.getChildren() as Planet[], this.myShip);
+            this.totalTime = (this.sys.game.loop.time - this.startTime) / 1000;
+            this.timeText.setText('Time: ' + this.totalTime);
+            this.fuelText.setText('Fuel left: ' + Phaser.Math.FloorTo(this.myShip.fuel, -2, 10));
+        }
     }
 
     checkCollision(planets: Planet[], ship: BetterShip) {
         if (ship.alive) {
+            let destroyed = false;
+            if (zeroVector.clone().add(ship.body.position as Phaser.Math.Vector2).length() > 530) {
+                destroyed = true
+            }
             planets.forEach((planet: Planet) => {
-                if (Math.pow(ship.body.position.x - planet.body.position.x, 2) + Math.pow(ship.body.position.y - planet.body.position.y, 2) <= Math.pow(ship.radius + planet.radius, 2)) {
-                    ship.destroy();
+                if (Math.pow(ship.body.position.x - planet.body.position.x, 2) + Math.pow(ship.body.position.y - planet.body.position.y, 2) <= Math.pow(ship.radius + planet.diameter / 2, 2)) {
+                    destroyed = true
                 }
             });
+
+            if (destroyed) {
+                ship.destroy();
+                this.camera.fade(2000);
+                this.scene.transition({
+                    target: "SceneGameOver",
+                    duration: 2000,
+                    moveAbove: true,
+                    sleep: false,
+                    data: { time: this.totalTime },
+                });
+            }
         }
     }
 }

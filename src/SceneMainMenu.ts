@@ -9,7 +9,7 @@ export class SceneMainMenu extends Phaser.Scene {
     }
 
     create() {
-        this.title = this.add.text((this.game.config.width as number)* 0.5, 128, "WEIRD GRAVITY SPACE GAME", {
+        this.title = this.add.text((this.game.config.width as number)* 0.5, 128, "SOME WEIRD GRAVITY SPACE GAME", {
             fontFamily: 'monospace',
             fontSize: 48,
             fontStyle: 'bold',
@@ -17,7 +17,7 @@ export class SceneMainMenu extends Phaser.Scene {
             align: 'center'
         });
 
-        this.hint = this.add.text((this.game.config.width as number) * 0.5, 180, "Use arrow-keys for thrust\nPress any key to begin\nPress F5 to reload", {
+        this.hint = this.add.text((this.game.config.width as number) * 0.5, 200, "Use arrow-keys for thrust\nHang in there while there is fuel left\nPress any key to begin\n", {
             fontFamily: 'monospace',
             fontSize: 20,
             fontStyle: 'bold',

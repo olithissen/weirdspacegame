@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { SceneMainMenu } from "./SceneMainMenu";
 import { SceneMain } from "./SceneMain";
+import { SceneGameOver } from "./SceneGameOver";
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
     active: false,
@@ -9,7 +10,7 @@ const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
 }
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
-    title: 'Some Weird Space Game',
+    title: 'Some Weird Gravity Space Game',
 
     type: Phaser.WEBGL,
 
@@ -26,7 +27,7 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
         },
     },
 
-    scene: [SceneMainMenu, SceneMain],
+    scene: [SceneMainMenu, SceneMain, SceneGameOver],
 
     parent: 'game',
     backgroundColor: '#000000',
