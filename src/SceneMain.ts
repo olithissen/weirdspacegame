@@ -311,7 +311,7 @@ export class SceneMain extends Phaser.Scene {
         this.startTime = this.sys.game.loop.time;
         this.totalTime = 0;
 
-        this.seedText = this.add.text(5, 5, "Star System: " + this.seed);
+        this.seedText = this.add.text(5, 5, "Star System: " + decodeURIComponent(this.seed));
         this.seedText.setScrollFactor(0, 0);
 
         this.timeText = this.add.text(5, 25, "Time:");
