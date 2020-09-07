@@ -21,9 +21,6 @@ module.exports = {
         exclude: /node_modules/,
       },
     ],
-      loaders: [
-          {test: /\.json$/, loader: 'json-loader'},
-      ]
   },
 
   devtool: 'inline-source-map',
