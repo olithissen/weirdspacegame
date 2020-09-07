@@ -10,7 +10,7 @@ module.exports = {
   },
   
   externals: {
-    phaser: 'Phaser'
+    phaser: 'Phaser',
   },
 
   module: {
