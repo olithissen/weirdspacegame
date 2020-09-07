@@ -20,7 +20,7 @@ export class SceneGameOver extends Phaser.Scene {
             align: 'center'
         });
 
-        this.hint = this.add.text((this.game.config.width as number) * 0.5, 200, "Star system '" + data.seed + "':\nYou survived for " + data.time + " seconds\n\nPress any key to play again", {
+        this.hint = this.add.text((this.game.config.width as number) * 0.5, 200, "Star system '" + decodeURIComponent(data.seed) + "':\nYou survived for " + data.time + " seconds\n\nPress any key to play again", {
             fontFamily: 'monospace',
             fontSize: 20,
             fontStyle: 'bold',
