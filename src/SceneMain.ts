@@ -309,6 +309,7 @@ export class SceneMain extends Phaser.Scene {
 
     create() {
         this.startTime = this.sys.game.loop.time;
+        this.totalTime = 0;
 
         this.seedText = this.add.text(5, 5, "Star System: " + this.seed);
         this.seedText.setScrollFactor(0, 0);
@@ -340,13 +341,13 @@ export class SceneMain extends Phaser.Scene {
         this.camera.startFollow(this.myShip);
     }
 
-    update() {
+    update(time : number, delta: number) {
         if (this.myShip.alive) {
             this.myShip.thrusters(this.cursors.up.isDown, this.cursors.down.isDown, this.cursors.left.isDown, this.cursors.right.isDown)
             this.myShip.update();
             this.checkCollision(this.gravitySources.getChildren() as Planet[], this.myShip);
-            this.totalTime = (this.sys.game.loop.time - this.startTime) / 1000;
-            this.timeText.setText('Time: ' + this.totalTime);
+            this.totalTime += delta / 1000;
+            this.timeText.setText('Time: ' + Phaser.Math.FloorTo(this.totalTime, -3, 10));
             this.fuelText.setText('Fuel left: ' + Phaser.Math.FloorTo(this.myShip.fuel, -2, 10));
         }
     }
@@ -371,7 +372,7 @@ export class SceneMain extends Phaser.Scene {
                     duration: 2000,
                     moveAbove: true,
                     sleep: false,
-                    data: { time: this.totalTime, seed: this.seed },
+                    data: { time: Phaser.Math.FloorTo(this.totalTime, -3, 10), seed: this.seed },
                 });
             }
         }
