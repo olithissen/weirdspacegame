@@ -10,7 +10,7 @@ export class SceneMainMenu extends Phaser.Scene {
     }
 
     create() {
-        this.github = this.add.text((this.game.config.width as number) * 0.5, 80, "Fork me on GitHub", {
+        this.github = this.add.text((this.game.config.width as number) * 0.5, 80, "Find me on GitHub", {
             fontFamily: 'monospace',
             fontSize: 16,
             color: '#cccccc',
