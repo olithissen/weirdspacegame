@@ -368,7 +368,7 @@ export class SceneMain extends Phaser.Scene {
         if (typeof seed !== 'string') {
             newSeed = window.location.search.substr(1);
             if (newSeed.length == 0) {
-                newSeed = new Phaser.Math.RandomDataGenerator().integer().toString();
+                newSeed = "1";
             }
         } else {
             newSeed = seed;
