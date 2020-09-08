@@ -363,12 +363,19 @@ export class SceneMain extends Phaser.Scene {
         super({ key: "SceneMain" });
     }
 
-    init() {
-        let seed = window.location.search.substr(1);
-        if (seed.length == 0) {
-            seed = "1";
+    init(seed: string) {
+        let newSeed: string;
+        if (typeof seed !== 'string') {
+            newSeed = window.location.search.substr(1);
+            if (newSeed.length == 0) {
+                newSeed = new Phaser.Math.RandomDataGenerator().integer().toString();
+            }
+        } else {
+            newSeed = seed;
         }
-        this.seed = seed;
+        history.pushState({}, null, `?${newSeed}`);
+        console.log(newSeed);
+        this.seed = newSeed;
     }
 
     preload() {
