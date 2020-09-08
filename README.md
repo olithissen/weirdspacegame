@@ -1,6 +1,7 @@
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/olithissen/weirdspacegame)
+[![Twitter Follow](https://img.shields.io/twitter/follow/bstevensondev.svg?style=social)](https://twitter.com/wrdgrvty)
 
-# Some Weird Gravity Space Game
+# Weird Gravity Space Game
 
 Orbit and slingshot your way around the planets for as long as your limited fuel allows. Use arrow keys for thrust. Good Luck!
 
@@ -19,6 +20,6 @@ yarn install && yarn dev
 
 # Technologies used
 
-* ([Phaser](https://phaser.io/))
+* [Phaser](https://phaser.io/)
 * TypeScript
 * Webpack
