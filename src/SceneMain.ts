@@ -174,7 +174,7 @@ class BetterShip extends Phaser.GameObjects.Container {
         this.polyThruster.isStroked = true;
         this.polyThruster.strokeColor = 0xffff00;
         this.polyThruster.visible = false;
-        
+
         var tween = scene.tweens.add({
             targets: this.polyThruster,
             scaleY: 0.9,
@@ -183,8 +183,8 @@ class BetterShip extends Phaser.GameObjects.Container {
             repeat: -1,
             yoyo: false
         });
-        
-        this.add([poly, this.polyThruster,this.lineMovementVector, this.lineGravityVector, this.lineThrustVector]);
+
+        this.add([poly, this.polyThruster, this.lineMovementVector, this.lineGravityVector, this.lineThrustVector]);
         this.bringToTop(poly);
 
         scene.add.existing(this);
@@ -231,9 +231,9 @@ class BetterShip extends Phaser.GameObjects.Container {
 
             this.fuel -= localThrustVector.length() * this.fuelConsumption;
             this.fuel = Phaser.Math.Clamp(this.fuel, 0, 10);
-            
+
         }
-        
+
         if (localThrustVector.length() > 0) {
             this.polyThruster.visible = true;
             this.polyThruster.setRotation(localThrustVector.angle() + 3 * Math.PI / 2);
@@ -241,7 +241,7 @@ class BetterShip extends Phaser.GameObjects.Container {
             this.polyThruster.visible = false;
         }
 
-    return localThrustVector;
+        return localThrustVector;
     }
 
     drawVectorLines() {
@@ -374,7 +374,6 @@ export class SceneMain extends Phaser.Scene {
             newSeed = seed;
         }
         history.pushState({}, null, `?${newSeed}`);
-        console.log(newSeed);
         this.seed = newSeed;
     }
 
@@ -385,6 +384,10 @@ export class SceneMain extends Phaser.Scene {
     }
 
     create() {
+        window.addEventListener('resize', () => {
+            this.game.scale.resize(window.innerWidth, window.innerHeight);
+        });
+
         this.totalTime = 0;
 
         this.seedText = this.add.text(5, 5, "Star System: " + decodeURIComponent(this.seed));
@@ -400,6 +403,8 @@ export class SceneMain extends Phaser.Scene {
         new AsteroidBelt(this, 600, 0x444444, { min: 530, max: 1000 });
 
         this.cursors = this.input.keyboard.createCursorKeys();
+        this.pointer = this.input.activePointer;
+
         this.camera = this.cameras.main;
         this.camera.centerOn(0, 0);
         this.camera.setZoom(1);
@@ -421,13 +426,43 @@ export class SceneMain extends Phaser.Scene {
 
     update(time: number, delta: number) {
         if (this.myShip.alive) {
-            this.myShip.thrusters(this.cursors.up.isDown, this.cursors.down.isDown, this.cursors.left.isDown, this.cursors.right.isDown)
+            let thrusters = this.translateInputs();
+
+            // this.myShip.thrusters(this.cursors.up.isDown, this.cursors.down.isDown, this.cursors.left.isDown, this.cursors.right.isDown)
+            this.myShip.thrusters(thrusters[0], thrusters[1], thrusters[2], thrusters[3])
             this.myShip.update();
             this.checkCollision(this.gravitySources.getChildren() as Planet[], this.myShip);
             this.totalTime += delta / 1000;
             this.timeText.setText('Time: ' + Phaser.Math.FloorTo(this.totalTime, -3, 10));
             this.fuelText.setText('Fuel left: ' + Phaser.Math.FloorTo(this.myShip.fuel, -2, 10));
         }
+    }
+
+    translateInputs() {
+        if (this.pointer.isDown) {
+            let origin = new Phaser.Math.Vector2(this.pointer.downX, this.pointer.downY);
+            let current = new Phaser.Math.Vector2(this.pointer.x, this.pointer.y);
+            let distance = Phaser.Math.Distance.BetweenPoints(origin, current);
+            if (distance > 10) {
+                return this.degToCompass(Phaser.Math.RadToDeg(Phaser.Math.Angle.BetweenPoints(origin, current) + Math.PI));
+            }
+        }
+        return [this.cursors.up.isDown, this.cursors.down.isDown, this.cursors.left.isDown, this.cursors.right.isDown];
+    }
+
+    degToCompass(num: number) {
+        var index = Math.floor((num / 45) + 0.5);
+        const arr = [
+            [false, false, true, false], 
+            [true, false, true, false], 
+            [true, false, false, false], 
+            [true, false, false, true], 
+            [false, false, false, true], 
+            [false, true, false, true], 
+            [false, true, false, false], 
+            [false, true, true, false]
+        ];
+        return arr[(index % 8)];
     }
 
     checkCollision(planets: Planet[], ship: BetterShip) {
@@ -454,5 +489,19 @@ export class SceneMain extends Phaser.Scene {
                 });
             }
         }
+    }
+
+    resize() {
+        let canvas = this.game.canvas, width = window.innerWidth, height = window.innerHeight;
+        let wratio = width / height, ratio = canvas.width / canvas.height;
+
+        if (wratio < ratio) {
+            canvas.style.width = width + "px";
+            canvas.style.height = (width / ratio) + "px";
+        } else {
+            canvas.style.width = (height * ratio) + "px";
+            canvas.style.height = height + "px";
+        }
+        this.cameras.main.centerOn(0, 0);
     }
 }

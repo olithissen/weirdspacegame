@@ -48,10 +48,13 @@ export class SceneMainMenu extends Phaser.Scene {
             }
         }, this);
 
-this.input.keyboard.on('keydown', function () {
-    this.scene.start("SceneMain");
-}, this);
+        const start = function (): void {
+            this.scene.start("SceneMain");
+        };
+
+        this.input.on('pointerdown', start, this);
+        this.input.keyboard.on('keydown', start, this);
     }
-update() {
-}
+    update() {
+    }
 }

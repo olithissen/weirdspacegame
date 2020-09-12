@@ -47,7 +47,7 @@ export class SceneGameOver extends Phaser.Scene {
         this.twitter.setInteractive();
         this.randomSeed.setInteractive();
 
-        this.twitter.on('pointerup', function() {
+        this.twitter.on('pointerup', function () {
             this.openExternalLink(twitterUrl);
         }, this);
 
@@ -61,7 +61,7 @@ export class SceneGameOver extends Phaser.Scene {
             });
         }, this);
 
-        this.input.keyboard.on('keydown', function () {
+        const replay = function (): void {
             this.scene.transition({
                 target: "SceneMain",
                 duration: 0,
@@ -69,19 +69,20 @@ export class SceneGameOver extends Phaser.Scene {
                 sleep: false,
                 data: data.seed,
             });
-        }, this);
+        };
+
+        this.input.keyboard.on('keydown', replay, this);
+        this.input.on('pointerdown', replay, this);
     }
 
     openExternalLink(url: string) {
         var s = window.open(url, '_blank');
 
-        if (s && s.focus)
-        {
+        if (s && s.focus) {
             s.focus();
         }
-        else if (!s)
-        {
+        else if (!s) {
             window.location.href = url;
-        }        
+        }
     }
 }
