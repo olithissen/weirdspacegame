@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "build": "webpack --config webpack.config.prod.js",
-    "dev": "webpack-dev-server --host 0.0.0.0"
+    "dev": "webpack-dev-server",
+    "devext": "webpack-dev-server --host 0.0.0.0"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^6.1.0",

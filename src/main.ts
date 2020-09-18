@@ -26,7 +26,6 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
             fps: 30,
         },
     },
-
     scene: [SceneMainMenu, SceneMain, SceneGameOver],
 
     parent: 'game',

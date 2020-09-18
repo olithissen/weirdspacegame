@@ -1,21 +1,26 @@
+import { Button } from "./Button"
+import { ButtonArray } from "./ButtonArray"
+
 export class SceneMainMenu extends Phaser.Scene {
     title: Phaser.GameObjects.Text;
     hint: Phaser.GameObjects.Text;
-    github: Phaser.GameObjects.Text;
     constructor() {
         super({ key: "SceneMainMenu" });
     }
 
     preload() {
+        this.load.svg('play', 'assets/play.svg', { width: 36, height: 36 });
+        this.load.svg('github', 'assets/github.svg', { width: 48, height: 48 });
     }
 
     create() {
-        this.github = this.add.text((this.game.config.width as number) * 0.5, 80, "Find me on GitHub", {
-            fontFamily: 'monospace',
-            fontSize: 16,
-            color: '#cccccc',
-            align: 'center'
-        });
+        const start = function (): void {
+            this.scene.start("SceneMain");
+        };
+
+        let playButton = new Button(this, 0, 0, "play", "play").on('pointerup', start, this);
+        let githubButton = new Button(this, 0, 0, "github", "github").on('pointerup', this.openExternal(), this);
+        new ButtonArray(this, (this.game.config.width as number) * 0.5, 300, 64, [playButton, githubButton]);
 
         this.title = this.add.text((this.game.config.width as number) * 0.5, 128, "WEIRD GRAVITY SPACE GAME", {
             fontFamily: 'monospace',
@@ -34,10 +39,12 @@ export class SceneMainMenu extends Phaser.Scene {
         });
         this.title.setOrigin(0.5);
         this.hint.setOrigin(0.5);
-        this.github.setOrigin(0.5);
-        this.github.setInteractive();
 
-        this.github.on('pointerup', function () {
+        this.input.keyboard.on('keydown', start, this);
+    }
+    
+    private openExternal(): Function {
+        return function () {
             let url = "https://github.com/olithissen/weirdspacegame";
             var s = window.open(url, '_blank');
             if (s && s.focus) {
@@ -46,15 +53,9 @@ export class SceneMainMenu extends Phaser.Scene {
             else if (!s) {
                 window.location.href = url;
             }
-        }, this);
-
-        const start = function (): void {
-            this.scene.start("SceneMain");
         };
-
-        this.input.on('pointerdown', start, this);
-        this.input.keyboard.on('keydown', start, this);
     }
+
     update() {
     }
 }
